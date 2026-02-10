@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>中英混合文字計數工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100vh;
+      overflow: hidden; /* 關鍵：避免出現滾動條 */
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      padding: 20px;
+      font-size: 1.8em;
+    }
+
+    #inputText {
+      flex: 1;
+      width: 100%;
+      border: none;
+      border-top: 1px solid #000;
+      border-bottom: 1px solid #000;
+      font-size: 1.2em;
+      padding: 12px;
+      resize: none;
+      outline: none;
+    }
+
+    .count {
+      padding: 20px;
+      font-size: 1.4em;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>中英混合文字計數工具</h1>
+  <textarea id="inputText" placeholder="請輸入中英文文字..." oninput="countText()"></textarea>
+  <div class="count">字數：<span id="charCount">0</span></div>
+
+  <script>
+    function countText() {
+      const text = document.getElementById("inputText").value;
+
+      // 中文字元（含中文標點）
+      const chineseMatches = text.match(/[\u4e00-\u9fff\uff01-\uff60]/g);
+      const chineseCount = chineseMatches ? chineseMatches.length : 0;
+
+      // 英文單字與標點
+      const englishMatches = text.match(/\b[a-zA-Z0-9]+(?:['-][a-zA-Z0-9]+)?\b|[.,!?;:"'()\[\]{}]/g);
+      const englishCount = englishMatches ? englishMatches.length : 0;
+
+      const totalCount = chineseCount + englishCount;
+      document.getElementById("charCount").textContent = totalCount;
+    }
+  </script>
+</body>
+</html>
