@@ -3,37 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦閱卷系統</title>
+    <title>電腦閱卷系統 (v1.0.3)</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; text-align: center; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
+        .container { max-width: 95%; margin: 0 auto; background: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 10px; }
         .input-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         textarea { width: 100%; height: 80px; padding: 10px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
         .btn { display: block; width: 100%; padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
         .btn:hover { background-color: #2980b9; }
         #error-msg { color: #e74c3c; font-weight: bold; margin-top: 15px; text-align: center; }
-        /* 結果輸出區塊：使用等寬字體以確保上下對齊 */
+        
+        /* 結果輸出區塊 */
         .result-box { margin-top: 20px; background-color: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; overflow-x: auto; display: none; }
-        pre { font-family: "Courier New", Courier, monospace; font-size: 16px; margin: 0; line-height: 1.5; }
-        .info-text { font-size: 14px; color: #7f8c8d; margin-bottom: 15px; }
+        
+        /* 關鍵：使用 pre 保持格式，並允許橫向捲動 */
+        pre { 
+            font-family: "Courier New", Courier, monospace; 
+            font-size: 16px; 
+            margin: 0; 
+            line-height: 1.5; 
+            white-space: pre; /* 禁止自動換行，強制單行顯示 */
+        }
+        .info-text { font-size: 14px; color: #7f8c8d; margin-bottom: 15px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📝 電腦閱卷系統 v2.0</h1>
-    <p class="info-text">提示：標準答案僅接受 A-D。考生答案接受 A-D，若未作答請輸入「?」。支援百題以上對齊。</p>
+    <h1>📝 電腦閱卷系統 v3.0</h1>
+    <p class="info-text">支援自動對齊百位數題號，最後一位十位數完整顯示。</p>
     
     <div class="input-group">
-        <label for="std-ans">標準答案：</label>
-        <textarea id="std-ans" placeholder="請貼上標準答案..."></textarea>
+        <label for="std-ans">標準答案 (Standard Answers)：</label>
+        <textarea id="std-ans" placeholder="請貼上標準答案 (A-D)..."></textarea>
     </div>
     
     <div class="input-group">
-        <label for="stu-ans">考生答案：</label>
-        <textarea id="stu-ans" placeholder="請貼上考生答案..."></textarea>
+        <label for="stu-ans">考生答案 (Student Answers)：</label>
+        <textarea id="stu-ans" placeholder="請貼上考生答案 (A-D, ?)..."></textarea>
     </div>
     
     <button class="btn" onclick="gradeAnswers()">開始批改</button>
@@ -75,74 +84,93 @@
             return;
         }
 
-        // 2. 檢核長度
         if (stdAns.length !== stuAns.length) {
             errorMsg.innerText = `【錯誤】長度不一致！標準答案共 ${stdAns.length} 題，考生答案共 ${stuAns.length} 題。`;
             return;
         }
 
-        // 3. 批改與計分
+        // 2. 批改與計分
         const totalQ = stdAns.length;
         let correctCount = 0;
-        let stdRow = [];
-        let stuRow = [];
+        let stdRowArr = [];
+        let stuRowArr = [];
 
         for (let i = 0; i < totalQ; i++) {
             if (stdAns[i] === stuAns[i]) {
                 correctCount++;
-                stdRow.push('-');
-                stuRow.push('-');
+                stdRowArr.push('-');
+                stuRowArr.push('-');
             } else {
-                stdRow.push(stdAns[i]);
-                stuRow.push(stuAns[i]);
+                stdRowArr.push(stdAns[i]);
+                stuRowArr.push(stuAns[i]);
             }
         }
         const score = ((correctCount / totalQ) * 100).toFixed(2);
 
-        // 4. 排版準備 (修正邏輯)
+        // 3. 排版準備：計算初始顯示長度
         let displayLen = Math.ceil(totalQ / 10) * 10;
         if (displayLen === 0) displayLen = 10;
 
-        // 4.1 建立個位數列 (0-9 循環)
+        // 4. 建立陣列 (使用 Array.from 確保獨立性)
         let onesRowChars = [];
-        for (let i = 0; i < displayLen; i++) {
-            onesRowChars.push(((i + 1) % 10).toString());
-        }
+        let tensRowChars = new Array(displayLen).fill(' '); // 先填滿空白
 
-        // 4.2 建立十位數列 (先填滿空白，再定點覆寫)
-        // 建立一個充滿空白字元的陣列
-        let tensRowChars = new Array(displayLen).fill(' ');
-
-        // 處理第 1 題 (Index 0) 的特殊標記 '0'
+        // 5. 填入十位數標籤 (關鍵修正邏輯)
+        // 處理第 1 題
         tensRowChars[0] = '0';
 
-        // 處理第 10, 20, 30... 題 (Index 9, 19, 29...)
-        // 迴圈從 9 開始 (第10題)，每次加 10
+        // 處理第 10, 20... 題
         for (let i = 9; i < displayLen; i += 10) {
-            // 計算標籤數值，例如 i=99 時，label="10"
-            let label = ((i + 1) / 10).toString();
+            let label = ((i + 1) / 10).toString(); // 例如 "1", "10", "12"
             
-            // 將 label 的每個字元依序寫入陣列，覆蓋原本的空白
-            // 例子：第100題 (i=99), label="10"
-            // tensRowChars[99] = '1'
-            // tensRowChars[100] = '0'
+            // 逐字元填入
             for (let j = 0; j < label.length; j++) {
-                // 確保不超出陣列範圍
-                if (i + j < displayLen) {
-                    tensRowChars[i + j] = label[j];
+                let targetIndex = i + j;
+                
+                // 如果目標位置超出了目前的 displayLen (例如第120題要寫 '2' 在 index 120)
+                if (targetIndex >= tensRowChars.length) {
+                    // 動態擴充 tensRowChars
+                    tensRowChars.push(label[j]);
+                } else {
+                    // 覆蓋現有位置
+                    tensRowChars[targetIndex] = label[j];
                 }
             }
         }
 
+        // 6. 重新計算最終長度 (因為 tensRowChars 可能變長了)
+        const finalLength = tensRowChars.length;
+
+        // 7. 填補個位數列 (onesRowChars)
+        // 規則：只填到 displayLen (例如120)，超出的部分 (因為十位數溢出) 補空白
+        for (let i = 0; i < finalLength; i++) {
+            if (i < displayLen) {
+                onesRowChars.push(((i + 1) % 10).toString());
+            } else {
+                onesRowChars.push(' '); // 溢出的十位數下方補空白
+            }
+        }
+
+        // 8. 填補答案列
+        // 先補齊到 displayLen
+        while (stdRowArr.length < displayLen) {
+            stdRowArr.push(' ');
+            stuRowArr.push(' ');
+        }
+        // 如果 finalLength 變長了，繼續補空白
+        while (stdRowArr.length < finalLength) {
+            stdRowArr.push(' ');
+            stuRowArr.push(' ');
+        }
+
+        // 轉換為字串
         const tensStr = tensRowChars.join('');
         const onesStr = onesRowChars.join('');
-        
-        // 組合答案字串並補足空白
-        const stdStr = stdRow.join('') + ' '.repeat(displayLen - totalQ);
-        const stuStr = stuRow.join('') + ' '.repeat(displayLen - totalQ);
+        const stdStr = stdRowArr.join('');
+        const stuStr = stuRowArr.join('');
 
-        // 5. 組合最終輸出
-        const separatorLength = 15 + displayLen;
+        // 9. 輸出
+        const separatorLength = finalLength + 15; // 標題區塊長度約 15
         const separator = '='.repeat(separatorLength);
         const dashLine = '-'.repeat(separatorLength);
 
