@@ -255,7 +255,7 @@
         // UID 生成
         const uidString = `${salt}-${summary}`;
         const uidHash = await generateSHA256(uidString);
-        const uid = `${uidHash}@generated-ics`;
+        const uid = `${uidHash}@ics.boyihou.me`;
 
         // DTSTAMP (UTC)
         const now = new Date();
